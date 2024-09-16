@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <errno.h>
+#include <unistd.h>
 
-#define N 1000 // number of threads
+#define N 10 // number of threads
 #define M 10000 // number of iterations per thread
 #define V 1 // value added to the balance by each thread at each iteration
 
@@ -16,13 +17,16 @@ typedef struct queue{
 }t_queue;
 
 struct queue_node{
-	pthread_t* thread;
+	pthread_t thread;
 	t_queue_Node* next;
 };
 
 //Queue Methods
 t_queue* create_queue(){
 	t_queue* Queue = (t_queue *)malloc(sizeof(t_queue));
+	Queue->Head=NULL;
+	Queue->Tail=NULL;
+	return Queue;
 }
 
 void delete_queue(t_queue* Queue){
@@ -36,7 +40,7 @@ void delete_queue(t_queue* Queue){
 	free(Queue);
 }
 
-void enqueue(t_queue* Queue, pthread_t* thread){
+void enqueue(t_queue* Queue, pthread_t thread){
 	t_queue_Node* Tail = Queue->Tail;
 	if(Tail==NULL){
 		t_queue_Node* temp = (t_queue_Node*)malloc(sizeof(t_queue_Node));
@@ -44,6 +48,7 @@ void enqueue(t_queue* Queue, pthread_t* thread){
 		temp->next=NULL;
 		Queue->Head=temp;
 		Queue->Tail=temp;
+
 	}else{
 		t_queue_Node* temp = (t_queue_Node*)malloc(sizeof(t_queue_Node));
 		temp->thread=thread;
@@ -54,32 +59,52 @@ void enqueue(t_queue* Queue, pthread_t* thread){
 
 }
 
-pthread_t* dequeue(t_queue* Queue){
+pthread_t dequeue(t_queue* Queue){
 	t_queue_Node* Head = Queue->Head;
-	if(Head==NULL) return NULL;
-	pthread_t* temp=Head->thread;
+	if(Head==NULL) return -1;
+	pthread_t temp=Head->thread;
 	Queue->Head=Head->next;
 	free(Head);
 	return temp;
 }
 
-pthread_t* get_head(t_queue* Queue){
+pthread_t get_head(t_queue* Queue){
 	if(Queue->Head!=NULL) return Queue->Head->thread;
-	else return NULL;
+	else return -1;
 }
 
 void print_queue(t_queue* Queue){
 	t_queue_Node* Head = Queue->Head;
 	while(Head!=NULL){
-		printf("id:%ln\n", Head->thread);
+		printf("id:%ld\n", Head->thread);
 		Head=Head->next;
 	}
 }
+
+int in_queue(t_queue* Queue, pthread_t thread){
+	t_queue_Node* Head = Queue->Head;
+	while(Head!=NULL){
+		if(Head->thread==thread) return 1;
+		Head=Head->next;
+	}
+	return 0;
+}
+
+t_queue* Queue;
 
 unsigned long int shared_variable;
 int n = N, m = M, v = V;
 
 void* thread_work(void *arg) {
+	//printf("get_head:%ld, self:%ld", get_head(Queue), pthread_self());
+	while(get_head(Queue)!=pthread_self()){
+		if(in_queue(Queue,pthread_self())==0){
+			enqueue(Queue, pthread_self());
+		}
+		//printf("get_head:%ld, self:%ld", get_head(Queue), pthread_self());
+		sleep(0.2);
+	}
+	if(dequeue(Queue)!=pthread_self()) perror("Id in head different from self\n");
 	int i;
 	for (i = 0; i < m; i++)
 		shared_variable += v;
@@ -94,6 +119,7 @@ int main(int argc, char **argv)
 	shared_variable = 0;
 
 	//queue allocation
+	Queue = create_queue();
 
 
 	printf("Going to start %d threads, each adding %d times %d to a shared variable initialized to zero...", n, m, v); fflush(stdout);
@@ -105,6 +131,7 @@ int main(int argc, char **argv)
 			exit(EXIT_FAILURE);
 		}
 	printf("ok\n");
+	print_queue(Queue);
 
 	printf("Waiting for the termination of all the %d threads...", n); fflush(stdout);
 	for (i = 0; i < n; i++)
