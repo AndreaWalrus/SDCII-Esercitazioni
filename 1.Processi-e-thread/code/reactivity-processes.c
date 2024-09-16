@@ -6,7 +6,14 @@
 #include <sys/wait.h>
 #include <pthread.h>
 
+#define SIZE (1<<24)
+#define STEPS 2048
+int* temp = NULL;
+
 void do_work() {
+	for(int j=0; j<SIZE; j+=STEPS){
+		temp[j]=j;
+	}
 	return;
 }
 
@@ -18,6 +25,13 @@ int main(int argc, char **argv) {
 	
 	// parse N from the command line
 	int n = atoi(argv[1]);
+
+	//temp allocation
+	temp = (int*)calloc(SIZE, sizeof(int));
+	if (temp == NULL) {
+        fprintf(stderr, "Cannot allocate memory!\n");
+        exit(EXIT_FAILURE);
+    }
 		
 	// process reactivity
 	printf("Process reactivity, %d tests...\n", n);

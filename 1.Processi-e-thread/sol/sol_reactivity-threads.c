@@ -6,21 +6,22 @@
 #include <sys/wait.h>
 #include <pthread.h>
 
-#define SIZE (1<<24)
-#define STEPS 2048
-int* temp = NULL;
+#define ITEMS   (1 << 24)
+#define STEP    1024
+int* global_buff = NULL;
 
 void do_work() {
-	for(int j=0; j<SIZE; j+=STEPS){
-		temp[j]=j;
-	}
-	return;
+    int j;
+    for (j = 0; j < ITEMS; j += STEP) {
+        global_buff[j] = j;
+    }
 }
 
 void* thread_fun(void *arg) {
 	do_work();
 	pthread_exit(NULL);
 }
+
 
 int main(int argc, char **argv) {
 	if (argc != 2) {
@@ -30,10 +31,10 @@ int main(int argc, char **argv) {
 	
 	// parse N from the command line
 	int n = atoi(argv[1]);
-
-	//temp allocation
-	temp = (int*)calloc(SIZE, sizeof(int));
-	if (temp == NULL) {
+	
+	// allocate a large buffer of zeroed memory 
+	global_buff = (int*)calloc(ITEMS, sizeof(int));
+    if (global_buff == NULL) {
         fprintf(stderr, "Cannot allocate memory!\n");
         exit(EXIT_FAILURE);
     }
