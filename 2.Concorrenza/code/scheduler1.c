@@ -25,7 +25,7 @@ typedef struct thread_args_s {
 void* client(void* arg_ptr) {
     thread_args_t* args = (thread_args_t*) arg_ptr;
 
-    int i, ret = 0;
+    int i, done = 0;
 
     if(sem_wait(args->semaphore)==-1) fprintf(stderr, "Failed to lock the semaphore, error:%d\n", errno);
 
@@ -35,9 +35,15 @@ void* client(void* arg_ptr) {
     for (i = 0; i < args->num_tasks; ++i) {
         // we simulate a work item by sleeping for 0 up to MAX_SLEEP seconds
         sleep(rand() % (MAX_SLEEP+1));
+        if(i%2==0)done=0;
+        else{
+            done=1;
+            if(sem_post(args->semaphore)==-1) fprintf(stderr, "Failed to unlock the semaphore, error:%d\n", errno);
+            printf("[@Thread%d] Partial. Resource released!\n", args->ID);
+        }
     }
 
-    if(sem_post(args->semaphore)==-1) fprintf(stderr, "Failed to unlock the semaphore, error:%d\n", errno);
+    if(done==0) if(sem_post(args->semaphore)==-1) fprintf(stderr, "Failed to unlock the semaphore, error:%d\n", errno);
 
     printf("[@Thread%d] Done. Resource released!\n", args->ID);
 
