@@ -13,6 +13,9 @@
 #define NUM_TASKS       3   // we define the number of work items per thread
 #define THREAD_BURST    5   // determines how many threads are spawned at the same time
 
+unsigned int counter;
+sem_t sem;
+
 /* We use a simple structure to encapsulate a thread's arguments */
 typedef struct thread_args_s {
     int     ID;
@@ -34,12 +37,16 @@ void* client(void* arg_ptr) {
     /*** Process the work items assigned to the thread ***/
     for (i = 0; i < args->num_tasks; ++i) {
         // we simulate a work item by sleeping for 0 up to MAX_SLEEP seconds
-        sleep(rand() % (MAX_SLEEP+1));
+        sleep(2*(rand() % (MAX_SLEEP+1)));
     }
 
     if(sem_post(args->semaphore)==-1) fprintf(stderr, "Failed to unlock the semaphore, error:%d\n", errno);
 
     printf("[@Thread%d] Done. Resource released!\n", args->ID);
+
+    sem_wait(&sem);
+    counter--;
+    sem_post(&sem);
 
     free(args); // I should free my own arguments!
     return NULL;
@@ -56,6 +63,7 @@ int main(int argc, char* argv[]) {
     sem_t* semaphore = malloc(sizeof(sem_t)); // we allocate a sem_t object on the heap
 
     if(sem_init(semaphore, 0, NUM_RESOURCES)==-1) fprintf(stderr, "Failed to initialize the semaphore, error:%d\n", errno);
+    if(sem_init(&sem, 0, 1)==-1) fprintf(stderr, "Failed to initialize the semaphore, error:%d\n", errno);
 
     /* Main loop */
     printf("[DRIVER] Press ENTER to spawn %d new threads. Press CTRL+D to quit!\n", THREAD_BURST);
@@ -86,19 +94,31 @@ int main(int argc, char* argv[]) {
                 exit(1);
             }
 
+            //Secondary semaphore for global thread counter
+            sem_wait(&sem);
+            counter++;
+            sem_post(&sem);
+
             ++thread_ID;
 
             // I won't wait for this thread: it's a good idea to detach it!
             pthread_detach(thread_handle);
         }
-
+    printf("threads:%d\n", counter);
         printf("==> [DRIVER] Press ENTER to spawn %d new threads. Press CTRL+D to quit!\n", THREAD_BURST);
     }
 
     printf("Exiting...\n");
 
     /*** Don't forget to destroy the semaphore once you're done ***/
+    while(counter!=0){
+        printf("Waiting for %d threads to finish\n", counter);
+        sleep(2);
+    }
+    printf("All threads finished work, exiting...\n");
     if(sem_destroy(semaphore)==-1) fprintf(stderr, "Failed to destroy the semaphore, error:%d", errno);
+    
+    if(sem_destroy(&sem)==-1) fprintf(stderr, "Failed to destroy the semaphore, error:%d", errno);
 
     free(semaphore);
 
