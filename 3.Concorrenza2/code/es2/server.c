@@ -30,6 +30,10 @@ void cleanup() {
      * TODO: EDIT AND IMPLEMENT THE OPERATION DESCRIBED ABOVE
      **/
 
+    if(sem_close(named_semaphore)!=0) handle_error("Error in closing the server semaphore");
+
+    if(sem_unlink(SEMAPHORE_NAME)!=0) handle_error("Error in unlinking the semaphore");
+
     exit(0);
 }
 
@@ -53,11 +57,13 @@ int main(int argc, char* argv[]) {
     /**
      * TODO: EDIT AND IMPLEMENT THE OPERATION DESCRIBED ABOVE
      **/
+
     
     // creation might fail if the named semaphore hasn't been deleted since its last creation
     // first we have to unlink it
     sem_unlink(SEMAPHORE_NAME);
-    named_semaphore = NULL;
+
+    named_semaphore=sem_open(SEMAPHORE_NAME, O_CREAT | O_EXCL, 0600, NUM_RESOURCES);
 
     if (named_semaphore == SEM_FAILED) {
         handle_error("Could not open the named semaphore");
@@ -90,7 +96,7 @@ int main(int argc, char* argv[]) {
             handle_error("Could not access the named semaphore");
         }
 
-        printf("[%s] %d resources are available and %d are in use\n", timestamp, current_value, NUM_RESOURCES - current_value);
+        printf("[%s] %d resources are available and %d are in use\n", timestamp, current_value,  NUM_RESOURCES - current_value);
 
         sleep(LOG_INTERVAL);
     }
