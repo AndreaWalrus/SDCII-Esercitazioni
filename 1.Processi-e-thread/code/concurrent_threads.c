@@ -4,7 +4,7 @@
 #include <errno.h>
 #include <unistd.h>
 
-#define N 10 // number of threads
+#define N 1000 // number of threads
 #define M 10000 // number of iterations per thread
 #define V 1 // value added to the balance by each thread at each iteration
 
@@ -53,8 +53,8 @@ void enqueue(t_queue* Queue, pthread_t thread){
 		t_queue_Node* temp = (t_queue_Node*)malloc(sizeof(t_queue_Node));
 		temp->thread=thread;
 		temp->next=NULL;
-		Tail->next=temp;
-		Queue->Tail=Tail;
+		Queue->Tail->next=temp;
+		Queue->Tail=temp;
 	}
 
 }
@@ -76,9 +76,10 @@ pthread_t get_head(t_queue* Queue){
 void print_queue(t_queue* Queue){
 	t_queue_Node* Head = Queue->Head;
 	while(Head!=NULL){
-		printf("id:%ld\n", Head->thread);
+		printf("id:%ld->", Head->thread);
 		Head=Head->next;
 	}
+	printf("\n");
 }
 
 int in_queue(t_queue* Queue, pthread_t thread){
@@ -96,15 +97,17 @@ unsigned long int shared_variable;
 int n = N, m = M, v = V;
 
 void* thread_work(void *arg) {
-	//printf("get_head:%ld, self:%ld", get_head(Queue), pthread_self());
 	while(get_head(Queue)!=pthread_self()){
 		if(in_queue(Queue,pthread_self())==0){
 			enqueue(Queue, pthread_self());
-		}
-		//printf("get_head:%ld, self:%ld", get_head(Queue), pthread_self());
-		sleep(0.2);
+			//printf("enqueued: %ld\n", pthread_self());
+		} //printf("waiting:%ld\n", pthread_self());
+		usleep(50*1000);
 	}
-	if(dequeue(Queue)!=pthread_self()) perror("Id in head different from self\n");
+	print_queue(Queue);
+	pthread_t check = dequeue(Queue);
+	//printf("dequeued: %ld\n", check);
+	if(check!=pthread_self()) perror("Id in head different from self\n");
 	int i;
 	for (i = 0; i < m; i++)
 		shared_variable += v;
@@ -125,13 +128,13 @@ int main(int argc, char **argv)
 	printf("Going to start %d threads, each adding %d times %d to a shared variable initialized to zero...", n, m, v); fflush(stdout);
 	pthread_t* threads = (pthread_t*)malloc(n * sizeof(pthread_t)); // also calloc(n,sizeof(pthread_t))
 	int i;
-	for (i = 0; i < n; i++)
+	for (i = 0; i < n; i++){
 		if (pthread_create(&threads[i], NULL, thread_work, NULL) != 0) {
 			fprintf(stderr, "Can't create a new thread, error %d\n", errno);
 			exit(EXIT_FAILURE);
 		}
+	}
 	printf("ok\n");
-	print_queue(Queue);
 
 	printf("Waiting for the termination of all the %d threads...", n); fflush(stdout);
 	for (i = 0; i < n; i++)
