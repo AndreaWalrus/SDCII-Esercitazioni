@@ -18,13 +18,13 @@ void openSemaphores() {
 
     /* TODO: open the semaphores as described above */
 
-    sem_filled = NULL;
+    sem_filled = sem_open(SEMNAME_FILLED, 0);
     if (sem_filled == SEM_FAILED) handle_error("sem_open filled");
 
-    sem_empty = NULL;
+    sem_empty = sem_open(SEMNAME_EMPTY, 0);
     if (sem_empty == SEM_FAILED) handle_error("sem_open empty");
 
-    sem_cs = NULL;
+    sem_cs = sem_open(SEMNAME_CS, 0);
     if (sem_cs == SEM_FAILED) handle_error("sem_open cs");
 }
 
@@ -36,8 +36,25 @@ void closeAndDestroySemaphores() {
 
     // TODO: first close them, handling errors using the handle_error() macro
 
+    ret = sem_close(sem_filled);
+    if(ret!=0) handle_error_en(ret, "sem_close filled consumer error");
+
+    ret = sem_close(sem_empty);
+    if(ret!=0) handle_error_en(ret, "sem_close empty consumer error");
+
+    ret = sem_close(sem_cs);
+    if(ret!=0) handle_error_en(ret, "sem_close cs consumer error");
+
     // TODO: then unlink them, handling errors using the handle_error() macro
 
+    ret = sem_unlink(SEMNAME_FILLED);
+    if(ret!=0) handle_error_en(ret, "sem_unlink filled error");
+
+    ret = sem_unlink(SEMNAME_EMPTY);
+    if(ret!=0) handle_error_en(ret, "sem_unlink empty error");
+
+    ret = sem_unlink(SEMNAME_CS);
+    if(ret!=0) handle_error_en(ret, "sem_unlink cs error");
 
 }
 
@@ -55,6 +72,9 @@ void consume(int id, int numOps) {
         /* TODO: implement the operations described above, and handle
          * possible errors using the predefined handle_error() macro */
 
+        if(sem_wait(sem_filled)!=0) handle_error("sem_wait filled");
+        if(sem_wait(sem_cs)!=0) handle_error("sem_wait cs");
+
         // CRITICAL SECTION
         int value = readFromBufferFile(BUFFER_SIZE, BUFFER_FILENAME);
         localSum += value;
@@ -66,6 +86,8 @@ void consume(int id, int numOps) {
         /* TODO: implement the operations described above, and handle
          * possible errors using the predefined handle_error() macro */
 
+        if(sem_post(sem_cs)!=0) handle_error("sem_post cs");
+        if(sem_post(sem_empty)!=0) handle_error("sem_post empty");
 
         numOps--;
     }

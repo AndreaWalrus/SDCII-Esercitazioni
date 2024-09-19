@@ -13,8 +13,8 @@
 #define BUFFER_FILENAME     "bufferfile.bin"
 #define INITIAL_DEPOSIT     0
 #define MAX_TRANSACTION     1000
-#define NUM_CONSUMERS       2
-#define NUM_PRODUCERS       1
+#define NUM_CONSUMERS       4
+#define NUM_PRODUCERS       8
 #define PRNG_SEED           0
 
 #define NUM_OPERATIONS      400
