@@ -1,4 +1,6 @@
 .vscode
+*.bin
+
 1.Processi-e-thread/code/concurrent_threads
 2.Concorrenza/code/concurrent_threads_semaphore
 2.Concorrenza/code/scheduler
@@ -9,4 +11,4 @@
 3.Concorrenza2/code/es2/server
 3.Concorrenza2/code/es3/producer
 3.Concorrenza2/code/es3/consumer
-3.Concorrenza2/code/es3/bufferfile.bin
+4.Shared-Memory/src/01/rq_wrk
