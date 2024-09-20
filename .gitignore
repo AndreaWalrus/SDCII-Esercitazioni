@@ -12,3 +12,7 @@
 3.Concorrenza2/code/es3/producer
 3.Concorrenza2/code/es3/consumer
 4.Shared-Memory/src/01/rq_wrk
+4.Shared-Memory/src/02/consumer
+4.Shared-Memory/src/02/producer
+4.Shared-Memory/src/03/consumer
+4.Shared-Memory/src/03/producer
