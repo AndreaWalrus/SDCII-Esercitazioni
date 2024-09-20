@@ -30,6 +30,16 @@ void openMemory() {
      * Request shared memory to the kernel and map the shared memory in the shared_mem_ptr variable.
      **/
 
+    fd_shm = shm_open(SH_MEM_NAME, O_RDWR, 0666);
+    if(fd_shm==-1) handle_error("shm_open consumer error");
+
+    if(ftruncate(fd_shm, sizeof(struct shared_memory))!=0) handle_error("ftruncate consumer error");
+
+    myshm_ptr = mmap(0, sizeof(struct shared_memory), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+    if(myshm_ptr==MAP_FAILED) handle_error("mmap consumer error");
+
+    printf("Memory opened and mapped in:%p\n", myshm_ptr);
+
 }
 
 void closeMemory() {
@@ -37,6 +47,10 @@ void closeMemory() {
      *
      * unmap the shared memory and close its descriptor
      **/
+
+    if(munmap(myshm_ptr, sizeof(struct shared_memory))!=0) handle_error("munmap consumer error");
+
+    if(close(fd_shm)!=0) handle_error("close consumer error");
 
 }
 
@@ -52,6 +66,13 @@ void consume(int id, int numOps) {
          * wait that there is something to read
          * write value in the buffer inside the shared memory and update the producer position
          */
+
+        while(myshm_ptr->buf[0]!=1){
+            usleep(100 * 1000);
+        }
+        int value=myshm_ptr->buf[myshm_ptr->read_index+1];
+        if(myshm_ptr->read_index==BUFFER_SIZE) myshm_ptr->read_index=0;
+        myshm_ptr->buf[0]=0;
 
 
         localSum += value;

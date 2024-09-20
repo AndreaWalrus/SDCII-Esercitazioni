@@ -40,6 +40,7 @@ void openMemory() {
 
     myshm_ptr = mmap(0, sizeof(struct shared_memory), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
     if(myshm_ptr==MAP_FAILED) handle_error("mmap consumer error");
+
 }
 
 void closeMemory() {

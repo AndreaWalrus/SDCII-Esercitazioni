@@ -30,6 +30,21 @@ void initMemory() {
      * struct shared_memory, and map the shared memory in the shared_mem_ptr variable.
      * Initialize the shared memory to 0.
      **/
+
+    shm_unlink(SH_MEM_NAME);
+
+    fd_shm = shm_open(SH_MEM_NAME, O_CREAT | O_EXCL | O_RDWR, 0666);
+    if(fd_shm==-1) handle_error("shm_open producer error");
+
+    if(ftruncate(fd_shm, sizeof(struct shared_memory))!=0) handle_error("ftruncate producer error");
+
+    myshm_ptr = mmap(0, sizeof(struct shared_memory), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+    if(myshm_ptr==MAP_FAILED) handle_error("mmap producer error");
+
+    memset(myshm_ptr, 0, sizeof(struct shared_memory));
+
+    printf("Memory initialized and mapped in:%p\n", myshm_ptr);
+
 }
 
 void closeMemory() {
@@ -37,6 +52,13 @@ void closeMemory() {
      *
      * unmap the shared memory, unlink the shared memory and close its descriptor
      **/
+
+    if(munmap(myshm_ptr, sizeof(struct shared_memory))!=0) handle_error("munmap producer error");
+
+    if(close(fd_shm)!=0) handle_error("close producer error");
+
+    if(shm_unlink(SH_MEM_NAME)!=0) handle_error("shm_unlink producer error");
+
 
 }
 
@@ -65,6 +87,13 @@ void produce(int id, int numOps) {
          * check that we can write
          * write value in the buffer inside the shared memory and update the producer position
          */
+        printf("1");
+        while(myshm_ptr->buf[0]!=0){
+            usleep(100 * 1000);
+        }
+        myshm_ptr->buf[myshm_ptr->write_index+1]=value;
+        if(myshm_ptr->write_index==BUFFER_SIZE) myshm_ptr->write_index=0;
+        myshm_ptr->buf[0]=1;
 
         localSum += value;
         numOps--;
