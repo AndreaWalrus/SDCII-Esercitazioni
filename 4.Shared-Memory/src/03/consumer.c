@@ -38,7 +38,7 @@ void openMemory() {
     myshm_ptr = mmap(0, sizeof(struct shared_memory), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
     if(myshm_ptr==MAP_FAILED) handle_error("mmap consumer error");
 
-    printf("Memory opened and mapped in:%p\n", myshm_ptr);
+    printf("Memory opened, fd:%d, mapped in:%p\n", fd_shm, myshm_ptr);
 
 }
 
@@ -56,10 +56,9 @@ void closeMemory() {
 
 void consume(int id, int numOps) {
     int localSum = 0;
-    int next_pos;
-
+    printf("Consuming\n");
     while (numOps > 0) {
-
+        //printf("Ops:%d\n", numOps);
 
         /**
          * Complete the following code:
@@ -68,12 +67,11 @@ void consume(int id, int numOps) {
          */
 
         while(myshm_ptr->buf[0]!=1){
-            usleep(100 * 1000);
+            usleep(10 * 1000);
         }
         int value=myshm_ptr->buf[myshm_ptr->read_index+1];
         if(myshm_ptr->read_index==BUFFER_SIZE) myshm_ptr->read_index=0;
         myshm_ptr->buf[0]=0;
-
 
         localSum += value;
         numOps--;

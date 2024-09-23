@@ -43,7 +43,7 @@ void initMemory() {
 
     memset(myshm_ptr, 0, sizeof(struct shared_memory));
 
-    printf("Memory initialized and mapped in:%p\n", myshm_ptr);
+    printf("Memory initialized, fd:%d, mapped in:%p\n", fd_shm, myshm_ptr);
 
 }
 
@@ -78,8 +78,10 @@ static inline int performRandomTransaction() {
 }
 
 void produce(int id, int numOps) {
-    int localSum,next_pos = 0;
+    int localSum = 0;
+    printf("Producing\n");
     while (numOps > 0) {
+        //printf("Ops:%d\n", numOps);
         // producer, just do your thing!
         int value = performRandomTransaction();
         /**
@@ -87,9 +89,8 @@ void produce(int id, int numOps) {
          * check that we can write
          * write value in the buffer inside the shared memory and update the producer position
          */
-        printf("1");
         while(myshm_ptr->buf[0]!=0){
-            usleep(100 * 1000);
+            usleep(10 * 1000);
         }
         myshm_ptr->buf[myshm_ptr->write_index+1]=value;
         if(myshm_ptr->write_index==BUFFER_SIZE) myshm_ptr->write_index=0;
