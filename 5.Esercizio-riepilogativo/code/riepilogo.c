@@ -99,17 +99,17 @@ void initMemory() {
     fd_shm = shm_open(SHM_NAME, O_CREAT | O_EXCL | O_RDWR, 0666);
     if(fd_shm==-1) handle_error("shm_open error");
 
-    if(ftruncate(fd_shm, sizeof(int)*n*m)!=0) handle_error("ftruncate error");
+    if(ftruncate(fd_shm, sizeof(int)*3)!=0) handle_error("ftruncate error");
 
-    data = mmap(0, sizeof(int)*n*m, PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+    data = mmap(0, sizeof(int)*3, PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
     if(data==MAP_FAILED) handle_error("mmap error");
 
-    memset(data, 0, sizeof(int)*n*m);
+    memset(data, 0, sizeof(int)*3);
 }
 
 void closeMemory() {
 
-    if(munmap(data, sizeof(int)*n*m)!=0) handle_error("munmap error");
+    if(munmap(data, sizeof(int)*3)!=0) handle_error("munmap error");
 
     if(close(fd_shm)!=0) handle_error("close error");
 
@@ -246,13 +246,16 @@ void childProcess(int child_id) {
 	int i;
     while(data[0]!=1){
         printf("[Child#%d] Spawning %d threads\n", child_id, m);
-        for (i = 0; i < m; i++)
+        for (i = 0; i < m; i++){
             thread_args_t* args = (thread_args_t*)malloc(sizeof(thread_args_t));
-            if (pthread_create(&threads[i], NULL, thread_function, NULL) != 0) {
+            args->child_id=child_id;
+            args->thread_id=i;
+            if (pthread_create(&threads[i], NULL, thread_function, args) != 0) {
                 fprintf(stderr, "Can't create a new thread, error %d\n", errno);
                 exit(EXIT_FAILURE);
             }
             printf("%d",i);
+        }
         printf("[Child#%d] Spawned %d threads\n", child_id, m);
 
         printf("[Child#%d] Waiting for the termination of all the %d threads...\n", child_id , m); fflush(stdout);
