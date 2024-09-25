@@ -20,3 +20,7 @@
 5.Esercizio-riepilogativo/code/accesses.log
 6.PIPE-e-FIFO/src/01-copy/copy
 6.PIPE-e-FIFO/src/02-Pipe/main
+6.PIPE-e-FIFO/src/03-EchoFIFO/echo
+6.PIPE-e-FIFO/src/03-EchoFIFO/client
+6.PIPE-e-FIFO/src/03-EchoFIFO/fifo_client
+6.PIPE-e-FIFO/src/03-EchoFIFO/fifo_echo
