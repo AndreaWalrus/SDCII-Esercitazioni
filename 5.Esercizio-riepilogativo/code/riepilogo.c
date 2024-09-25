@@ -38,10 +38,9 @@ int n = N, m = M, t = T;
  * them (e.g., "/mysem_critical_section") */
 
  #define SEM_CS "/mysem_cs"
- #define SEM_MAIN "/mysem_main"
  #define SEM_CHILD "/mysem_child"
 
- sem_t * sem_cs, *sem_main, *sem_child;
+ sem_t * sem_cs, *sem_child;
 
 /* TODO: declare a shared memory and the data type to be placed 
  * in the shared memory, and choose a unique identifier for
@@ -196,9 +195,6 @@ void mainProcess() {
         usleep(100*1000);
     }
     data[2]=1;
-    for(int i=0; i<n; i++){
-        if(sem_post(sem_main)!=0) handle_error("sem_post main error");
-    }
 
     printf("[Main] All children notified, sleeping...\n");
     sleep(t);
@@ -216,9 +212,10 @@ void mainProcess() {
     parseOutput();
 
     closeMemory();
+    sem_close(sem_cs);
+    sem_close(sem_child);
     destroy_named_semaphore(SEM_CS);
     destroy_named_semaphore(SEM_CHILD);
-    destroy_named_semaphore(SEM_MAIN);
 }
 
 void childProcess(int child_id) {
@@ -254,7 +251,6 @@ void childProcess(int child_id) {
                 fprintf(stderr, "Can't create a new thread, error %d\n", errno);
                 exit(EXIT_FAILURE);
             }
-            printf("%d",i);
         }
         printf("[Child#%d] Spawned %d threads\n", child_id, m);
 
@@ -262,6 +258,7 @@ void childProcess(int child_id) {
         for (i = 0; i < m; i++)
             pthread_join(threads[i], NULL);
         printf("[Child#%d] All threads terminated\n", child_id);
+        //usleep(100*1000);
     }    
 
     printf("[Child#%d] Terminating from main signal!!!\n", child_id);
@@ -285,7 +282,6 @@ int main(int argc, char **argv) {
 
     sem_cs = create_named_semaphore(SEM_CS, 0660, 1);
     sem_child = create_named_semaphore(SEM_CHILD, 0660, 1);
-    sem_main = create_named_semaphore(SEM_MAIN, 0660, 0);
     
     initMemory();
 
