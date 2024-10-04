@@ -6,6 +6,7 @@
 int readOneByOne(int fd, char* buf, char separator) {
 
     int ret;
+    int bytes_read=0;
 
     /** [TO DO] READ THE MESSAGE THROUGH THE FIFO DESCRIPTOR
      *
@@ -21,6 +22,14 @@ int readOneByOne(int fd, char* buf, char separator) {
      *   dealt with!
      **/
 
+    while(buf[bytes_read]!=separator){
+        ret = read(fd, buf+bytes_read, 1);
+        if(ret==0) handle_error("all pipe writers are closed");
+        if(ret==-1) continue;
+        bytes_read++;
+    }
+    return bytes_read;
+
 }
 
 void writeMsg(int fd, char* buf, int size) {
@@ -33,5 +42,12 @@ void writeMsg(int fd, char* buf, int size) {
      * - make sure that all the bytes have been written: use a while
      *   cycle in the implementation as we did for file descriptors!
      **/
+    size_t written_bytes=0;
+    size_t bytes_left = size;
+    while(bytes_left>0){
+        ret = write(fd, buf+written_bytes, bytes_left);
+        if(ret==-1) continue;
+        if(ret>0){bytes_left-=ret; written_bytes+=ret;}
+    }
 
 }
