@@ -4,7 +4,6 @@
 
 
 int readOneByOne(int fd, char* buf, char separator) {
-
     int ret;
     int bytes_read=0;
 
@@ -21,13 +20,14 @@ int readOneByOne(int fd, char* buf, char separator) {
      *   the FIFO unexpectedly: this is an error that should be
      *   dealt with!
      **/
-
-    while(buf[bytes_read]!=separator){
+    while(1){
         ret = read(fd, buf+bytes_read, 1);
         if(ret==0) handle_error("all pipe writers are closed");
         if(ret==-1) continue;
+        if(buf[bytes_read]==separator) break;
         bytes_read++;
     }
+    fflush(stdout);
     return bytes_read;
 
 }
@@ -49,5 +49,7 @@ void writeMsg(int fd, char* buf, int size) {
         if(ret==-1) continue;
         if(ret>0){bytes_left-=ret; written_bytes+=ret;}
     }
+    //printf("Sent %ld bytes\n",written_bytes);
+    fflush(stdout);
 
 }

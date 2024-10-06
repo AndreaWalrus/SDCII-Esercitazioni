@@ -19,4 +19,8 @@
 #define ECHO_FIFO_NAME  "fifo_echo"
 
 
+/*void writeMsg(int fd, char* buf, int size);
+int readOneByOne(int fd, char* buf, char separator);
+*/
+
 #endif

@@ -8,6 +8,7 @@
 #include <sys/stat.h>  // mkfifo()
 
 #include "common.h"
+#include "rw.c"
 
 /** Client component **/
 int main(int argc, char* argv[]) {
@@ -29,6 +30,14 @@ int main(int argc, char* argv[]) {
      *   and the Client program does it through 'client_fifo'
      **/
 
+    echo_fifo = open(ECHO_FIFO_NAME, O_RDONLY);
+    if(echo_fifo==-1) handle_error("fifo open error");
+
+    client_fifo = open(CLNT_FIFO_NAME, O_WRONLY);
+    if(echo_fifo==-1) handle_error("fifo open error");
+
+    printf("Opened both FIFOs\n");
+
     // display welcome message received from the Echo process
     /** INSERT CODE HERE TO READ THE MESSAGE THROUGH THE ECHO FIFO
      *
@@ -43,7 +52,8 @@ int main(int argc, char* argv[]) {
      * - reading 0 bytes means that the other process has closed
      *   the FIFO unexpectedly: this is an error to deal with!
      **/
-
+    bytes_read = readOneByOne(echo_fifo, buf, '\n');
+    printf("Bytes read:%d\n", bytes_read);
     buf[bytes_read] = '\0';
     printf("%s", buf);
 
@@ -67,6 +77,7 @@ int main(int argc, char* argv[]) {
          *   cycle in the implementation as we did for file descriptors!
          * - store the total number of bytes sent in 'bytes_sent'
          **/
+        writeMsg(client_fifo, buf, bytes_left);
 
         /* After a quit command we won't receive data from the server
          * anymore, thus we must exit the main loop. */
@@ -85,6 +96,8 @@ int main(int argc, char* argv[]) {
          * - reading 0 bytes means that the other process has closed
          *   the FIFO unexpectedly: this is an error to deal with!
          **/
+        bytes_read = readOneByOne(echo_fifo, buf, '\n');
+        //printf("Bytes read:%d\n", bytes_read);
         buf[bytes_read] = '\0';
         printf("Server response: %s\n", buf);
     }
