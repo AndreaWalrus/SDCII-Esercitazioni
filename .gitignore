@@ -24,3 +24,7 @@
 6.PIPE-e-FIFO/src/03-EchoFIFO/client
 6.PIPE-e-FIFO/src/03-EchoFIFO/fifo_client
 6.PIPE-e-FIFO/src/03-EchoFIFO/fifo_echo
+7.Scrittura-su-Socket/src/01-prod_cons/producer
+7.Scrittura-su-Socket/src/01-prod_cons/consumer
+7.Scrittura-su-Socket/src/02-time_server/server
+7.Scrittura-su-Socket/src/02-time_server/client
