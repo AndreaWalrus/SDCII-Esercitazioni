@@ -24,6 +24,9 @@ void* connection_handler(int socket_desc) {
     char* quit_command = SERVER_COMMAND;
     size_t quit_command_len = strlen(quit_command);
 
+    struct sockaddr client_addr;
+    socklen_t client_addr_len;
+
     // echo loop
     while (1) {
         /** INSERT CODE TO RECEIVE A MESSAGE FROM THE CLIENT
@@ -36,7 +39,9 @@ void* connection_handler(int socket_desc) {
          *   recvfrom() we will get stuck, because the call is blocking!
          * - in UDP we don't deal with partially sent messages, but we manage other errors
          */
-         */
+
+        recv_bytes = recvfrom(socket_desc, buf, buf_len, 0, &client_addr, &client_addr_len);
+        if(recv_bytes==0) handle_error("connection closed");
 
         // check if either I have just been told to quit...
         /** TODO: check if the quit_command is received
@@ -51,6 +56,7 @@ void* connection_handler(int socket_desc) {
          * - exit from the cycle when there is nothing to send back
          */
 
+        if(memcmp(buf, quit_command, quit_command_len)==0) break;
 
         // ...or I have to send the message back
         /** INSERT CODE TO ECHO THE RECEIVED MESSAGE BACK TO THE CLIENT
@@ -62,6 +68,14 @@ void* connection_handler(int socket_desc) {
          * - don't deal with partially sent messages, but manage other errors
          * - message size IS NOT buf size
          */
+
+        msg_len = recv_bytes;
+
+        ret = sendto(socket_desc, buf, msg_len, 0, &client_addr, client_addr_len);
+        if(ret==-1) handle_error("send error");
+        
+        if (DEBUG) fprintf(stderr, "Sent message of %d bytes back...\n", ret);
+ 
     }
 
     // close socket
@@ -90,6 +104,11 @@ int main(int argc, char* argv[]) {
      * - tipo SOCK_DGRAM
      */
 
+    socket_desc = socket(AF_INET, SOCK_DGRAM, 0);
+    if(socket_desc==-1) handle_error("socket creation error");
+
+    if (DEBUG) fprintf(stderr, "Socket created...\n");
+
     /* We enable SO_REUSEADDR to quickly restart our server after a crash:
      * for more details, read about the TIME_WAIT state in the TCP protocol */
     int reuseaddr_opt = 1;
@@ -110,6 +129,15 @@ int main(int argc, char* argv[]) {
      * - - attention to the bind method:
      * - - it requires as second field struct sockaddr* addr, but our address is a struct sockaddr_in, hence we must cast it (struct sockaddr*) &server_addr
      */
+
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(SERVER_PORT);
+
+    ret = bind(socket_desc, (struct sockaddr*) &server_addr, sockaddr_len);
+    if(ret!=0) handle_error("socket binding error");
+
+    if (DEBUG) fprintf(stderr, "Binded address to socket...\n");
 
 
     // loop to handle incoming connections (sequentially)
