@@ -24,6 +24,9 @@ int main(int argc, char* argv[]) {
      * - tipo SOCK_STREAM
      */
 
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+    if(socket_desc==-1) handle_error("socket creation error");
+
     if (DEBUG) fprintf(stderr, "Socket created...\n");
 
     /**
@@ -35,9 +38,16 @@ int main(int argc, char* argv[]) {
      * - - server_addr.sin_family,
      * - - server_addr.sin_port (using htons() method)
      * - initiate a connection to the server
-     * - - attention to the bind method:
+     * - - attention to the connect method:
      * - - it requires as second field struct sockaddr* addr, but our address is a struct sockaddr_in, hence we must cast it (struct sockaddr*) &server_addr
      */
+
+    server_addr.sin_addr.s_addr = inet_addr(SERVER_ADDRESS);
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(SERVER_PORT);
+
+    ret = connect(socket_desc, (struct sockaddr*) &server_addr, sizeof(server_addr));
+    if(ret!=0) handle_error("socket connection error");
 
     if (DEBUG) fprintf(stderr, "Connection established!\n");
 
@@ -59,6 +69,12 @@ int main(int argc, char* argv[]) {
      * - - it requires as second field struct sockaddr* addr, but our address is a struct sockaddr_in, hence we must cast it (struct sockaddr*) &server_addr
      */
 
+    recv_bytes = recv(socket_desc, buf, buf_len, 0);
+    if(recv_bytes==0) handle_error("connection closed");
+
+    buf[recv_bytes]='\0';
+    printf("%s\n", buf);
+
     if (DEBUG) fprintf(stderr, "Received message of %d bytes...\n",recv_bytes);
 
 
@@ -79,9 +95,10 @@ int main(int argc, char* argv[]) {
         }
 
         msg_len = strlen(buf);
-//        buf[--msg_len] = '\0'; // remove '\n' from the end of the message
-
-		/**
+        buf[msg_len]='\0';
+        //buf[--msg_len] = '\0'; // remove '\n' from the end of the message
+        
+        /**
          *  TODO: send message to server
          *
          * Suggestions:
@@ -90,6 +107,9 @@ int main(int argc, char* argv[]) {
          * - deal with partially sent messages
          * - message size IS NOT buf size
          */
+
+        bytes_sent = send(socket_desc, buf, msg_len, 0);
+        if(bytes_sent==-1) handle_error("send error");
 
         if (DEBUG) fprintf(stderr, "Sent message of %d bytes...\n", bytes_sent);
 
@@ -107,6 +127,8 @@ int main(int argc, char* argv[]) {
          * - exit from the cycle when there is nothing left to receive
          */
 
+        if(memcmp(buf, quit_command, quit_command_len)==0) break;
+
         /**
          *  TODO: read message from server
          * Suggestions:
@@ -116,6 +138,11 @@ int main(int argc, char* argv[]) {
          *   recv() we will get stuck, because the call is blocking!
          * - deal with partially sent messages (we do not know the message size)
          */
+        while(1){
+            recv_bytes = recv(socket_desc, buf, buf_len, 0);
+            if(recv_bytes==0) handle_error("connection closed");
+            if(buf[recv_bytes-1]=='\n') break;
+        }
 
         if (DEBUG) fprintf(stderr, "Received answer of %d bytes...\n",recv_bytes);
 
@@ -126,6 +153,9 @@ int main(int argc, char* argv[]) {
     /**
      *  TODO: close socket and release unused resources
      */
+
+    ret = close(socket_desc);
+    if(ret!=0) handle_error("close error");
 
     if (DEBUG) fprintf(stderr, "Socket closed...\n");
 
