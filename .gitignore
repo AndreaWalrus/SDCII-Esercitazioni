@@ -36,4 +36,8 @@
 8.Client-Server-con-Socket/src/03/serial
 8.Client-Server-con-Socket/src/03/multiprocess
 8.Client-Server-con-Socket/src/03/multithread
+9.Client-Server-MultiThread/server/client
+9.Client-Server-MultiThread/server/server
+9.Client-Server-MultiThread/sol/server/client
+9.Client-Server-MultiThread/sol/server/server
 
