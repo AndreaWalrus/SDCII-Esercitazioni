@@ -109,9 +109,17 @@ int main(int argc, char* argv[]) {
          * - don't deal with partially sent messages in UDP, but deal with other errors
          */
 
-        ret = recvfrom(socket_desc, buf, buf_len, 0, NULL, NULL);
-        if(ret==0) handle_error("connection closed");
+        //ret = recvfrom(socket_desc, buf, buf_len, 0, NULL, NULL);
+        //if(ret==0) handle_error("connection closed");
 
+        while(1){
+            ret = recvfrom(socket_desc, buf, buf_len, 0, NULL, NULL);
+            if (ret == -1 && errno == EINTR) continue;
+            if (ret == -1) handle_error("Cannot read from the socket");
+	        if (ret >= 0) break;
+	    }
+
+        if (DEBUG) fprintf(stderr, "Received message of %d bytes...\n", ret);
         printf("Server response: %s\n", buf); // no need to insert '\0'
     }
 

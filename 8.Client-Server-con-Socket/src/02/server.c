@@ -40,8 +40,14 @@ void* connection_handler(int socket_desc) {
          * - in UDP we don't deal with partially sent messages, but we manage other errors
          */
 
-        recv_bytes = recvfrom(socket_desc, buf, buf_len, 0, &client_addr, &client_addr_len);
-        if(recv_bytes==0) handle_error("connection closed");
+        while(1){
+            recv_bytes = recvfrom(socket_desc, buf, buf_len, 0, &client_addr, &client_addr_len);
+            if (recv_bytes == -1 && errno == EINTR) continue;
+            if (recv_bytes == -1) handle_error("Cannot read from the socket");
+	        if (recv_bytes >= 0) break;
+	    }
+
+        if (DEBUG) fprintf(stderr, "Received message of %d bytes...\n", recv_bytes);
 
         // check if either I have just been told to quit...
         /** TODO: check if the quit_command is received
@@ -76,12 +82,6 @@ void* connection_handler(int socket_desc) {
         
         if (DEBUG) fprintf(stderr, "Sent message of %d bytes back...\n", ret);
  
-    }
-
-    // close socket
-    ret = close(socket_desc);
-    if(ret) {
-        handle_error("Cannot close socket for incoming connection");
     }
 
     return NULL;
@@ -143,10 +143,17 @@ int main(int argc, char* argv[]) {
     // loop to handle incoming connections (sequentially)
     while (1) {
 		// accept an incoming connection
-        if (DEBUG) fprintf(stderr, "opening connection handler...\n");
+        if (DEBUG) fprintf(stderr, "opening new connection handler...\n");
 
         connection_handler(socket_desc);
     }
+
+    // close socket
+    ret = close(socket_desc);
+    if(ret) {
+        handle_error("Cannot close socket for incoming connection");
+    }
+
 
     exit(EXIT_SUCCESS); // this will never be executed
 }
