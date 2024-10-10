@@ -23,6 +23,8 @@ typedef struct handler_args_s
      * Specify fields for the arguments that will be populated in the
      * main thread and then accessed in thread_connection_handler(void* arg).
      **/
+    int client_desc;
+    struct sockaddr_in* client_addr;
      
 } handler_args_t;
 #endif
@@ -45,7 +47,8 @@ void connection_handler(int socket_desc, struct sockaddr_in* client_addr) {
     **/
 
     char client_ip[INET_ADDRSTRLEN] = {0};
-    uint16_t client_port = 0;
+    inet_ntop(AF_INET, &(client_addr->sin_addr), client_ip, INET_ADDRSTRLEN);
+    uint16_t client_port = ntohs(client_addr->sin_port);
     
 
     sprintf(buf, "Hi! I'm an echo server. You are %s talking on port %hu.\nI will send you back whatever"
@@ -57,6 +60,14 @@ void connection_handler(int socket_desc, struct sockaddr_in* client_addr) {
     * Suggestions:
     * - Send to the client the welcome message written in buf
     **/
+
+    int bytes_sent=0;
+    while(bytes_sent<msg_len){
+        ret = send(socket_desc, buf, msg_len, 0);
+        if(ret==-1 && errno==EINTR) continue;
+        if(ret==-1) handle_error("send error");
+        bytes_sent+=ret;
+    }
     
 
     while (1) {
@@ -69,9 +80,30 @@ void connection_handler(int socket_desc, struct sockaddr_in* client_addr) {
         * - Check if it is the quit message, in that case exit from the loop;
         * - Otherwise send back to the client the received message;
         **/
-        
-        
-        
+
+        while(1){
+                ret = recv(socket_desc, buf, buf_len, 0);
+                if(ret==-1 && errno==EINTR) continue;
+                if(ret==-1) handle_error("recv error");
+                if(ret>=0) break;
+        }
+        recv_bytes = ret;
+
+        if(DEBUG) fprintf(stderr, "Received message of %d bytes...\n", recv_bytes);
+
+        if(recv_bytes==quit_command_len && !memcmp(buf, quit_command, quit_command_len)) break;
+
+        msg_len=recv_bytes;     
+        bytes_sent = 0;
+        while(bytes_sent<msg_len){
+            ret = send(socket_desc, buf, msg_len, 0);
+            if(ret==-1 && errno==EINTR) continue;
+            if(ret==-1) handle_error("send error");
+            bytes_sent+=ret;
+        }
+
+        if(DEBUG) fprintf(stderr, "Sent message of %d bytes...\n", bytes_sent);  
+
     
     }
 
@@ -140,6 +172,24 @@ void mprocServer(int server_desc) {
          * - add a debug message in the child process to inform the
          *   user that the request has been handled
          **/
+
+        pid_t pid = fork();
+        if(pid==-1) handle_error("fork error");
+        if(pid==0){
+            //Child
+            ret = close(server_desc);
+            if(ret==-1) handle_error("close error");
+
+            connection_handler(client_desc, &client_addr);
+            if (DEBUG) fprintf(stderr, "Child: Connection handled successfully, dying...\n");
+            _exit(EXIT_SUCCESS);
+        }
+        //Parent
+        if (DEBUG) fprintf(stderr, "Parent: Child %d created\n", pid);
+        ret = close(client_desc);
+        if(ret==-1) handle_error("close error");
+
+        memset(&client_addr, 0, sizeof(struct sockaddr_in));
     }
 }
 
@@ -156,17 +206,25 @@ void *thread_connection_handler(void *arg) {
     * - After calling connection_handler free all the resources used by the thread
     *   and close the thread;
     **/
-    
+   handler_args_t *args = (handler_args_t*)arg;
+   connection_handler(args->client_desc, args->client_addr);
+
+   free(args->client_addr);
+   free(args);
+   if (DEBUG) fprintf(stderr, "Work finished, killing Thread...\n");
+   pthread_exit(NULL);
 }
 
 void mthreadServer(int server_desc) {
     int ret = 0;
-    // we allocate client_addr dynamically and initialize it to zero
-    struct sockaddr_in* client_addr = calloc(1, sizeof(struct sockaddr_in));
-
+    
     // loop to manage incoming connections spawning handler threads
     int sockaddr_len = sizeof(struct sockaddr_in);
     while (1) {
+
+        // we allocate client_addr dynamically and initialize it to zero
+        struct sockaddr_in* client_addr = calloc(1, sizeof(struct sockaddr_in));
+
         // accept incoming connection
         int client_desc = accept(server_desc, (struct sockaddr*) client_addr, (socklen_t*) &sockaddr_len);
         if(client_desc == -1 && errno == EINTR) continue; // check for interruption by signals
@@ -190,6 +248,18 @@ void mthreadServer(int server_desc) {
          *   careful: resetting fields in client_addr won't work!
          **/
         pthread_t thread;
+        handler_args_t* args = (handler_args_t*)malloc(sizeof(handler_args_t));
+        args->client_desc = client_desc;
+        args->client_addr = client_addr;
+
+        ret = pthread_create(&thread, NULL, thread_connection_handler, (void *)args);
+        if(ret!=0) handle_error_en(ret, "thread creation error");
+
+        if (DEBUG) fprintf(stderr, "New Thread handling the request...\n");
+
+        ret = pthread_detach(thread);
+        if(ret!=0) handle_error_en(ret, "thread detach error");
+
     }
 }
 
